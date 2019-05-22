@@ -10,6 +10,7 @@ LABEL maintainer="covidium_"
 # Airflow
 ARG AIRFLOW_VERSION=1.10.3
 ARG AIRFLOW_HOME=/usr/local/airflow
+ARG MAKEFLAGS=-j4
 
 COPY script/entrypoint.sh /entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
