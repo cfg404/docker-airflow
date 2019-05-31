@@ -1,0 +1,1 @@
+* wget https://raw.githubusercontent.com/apache/airflow/1.10.3/airflow/config_templates/airflow_local_settings.py

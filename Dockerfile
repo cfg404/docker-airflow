@@ -12,6 +12,8 @@ ARG AIRFLOW_VERSION=1.10.3
 ARG AIRFLOW_HOME=/usr/local/airflow
 ARG MAKEFLAGS=-j4
 
+ENV AIRFLOW_HOME=${AIRFLOW_HOME}
+
 RUN set -ex \
     && buildDeps=' \
         build-essential \
@@ -35,7 +37,8 @@ RUN set -ex \
         /usr/share/doc-base
 
 COPY script/entrypoint.sh /entrypoint.sh
-COPY config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+COPY config ${AIRFLOW_HOME}/config
+COPY hooks ${AIRFLOW_HOME}/hooks
 
 RUN chown -R airflow:airflow ${AIRFLOW_HOME}
 

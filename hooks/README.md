@@ -1,0 +1,1 @@
+* wget https://raw.githubusercontent.com/apache/airflow/1.10.3/airflow/hooks/S3_hook.py
