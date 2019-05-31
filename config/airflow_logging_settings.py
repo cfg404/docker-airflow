@@ -89,12 +89,12 @@ DEFAULT_LOGGING_CONFIG = {
     },
     'loggers': {
         'airflow.processor': {
-            'handlers': ['s3.processor'],
+            'handlers': ['processor'],
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'airflow.task': {
-            'handlers': ['s3.task'],
+            'handlers': ['task'],
             'level': LOG_LEVEL,
             'propagate': False,
         },
