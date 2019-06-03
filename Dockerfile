@@ -5,7 +5,7 @@
 # SOURCE: https://github.com/puckel/docker-airflow
 
 FROM python:3.7-slim
-LABEL maintainer="covidium_"
+LABEL maintainer="cfg404"
 
 # Airflow
 ARG AIRFLOW_VERSION=1.10.3

@@ -2,15 +2,16 @@
 [![Docker Hub](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/r/cfg404/airflow)
 
 
-This repository contains **Dockerfile** of [apache-airflow](https://github.com/apache/incubator-airflow) for [Docker](https://www.docker.com/)'s [automated build](https://registry.hub.docker.com/u/puckel/docker-airflow/) published to the public [Docker Hub Registry](https://registry.hub.docker.com/).
+This repository contains **Dockerfile** of [apache-airflow](https://github.com/apache/incubator-airflow) for [Docker](https://www.docker.com/)'s [automated build](https://cloud.docker.com/u/cfg404/repository/docker/cfg404/airflow) published to the public [Docker Hub Registry](https://registry.hub.docker.com/).
 
-## Informations
+## Info about versions and image
 
-Beside the 1.10.2 upstream image, this version has been upgraded to python 3.7 and uses Airflow 1.10.3 and the following fixes have been applied:
+Airflow: 1.10.3
+Python: 3.7-slim
 
+Added also:
 * https://github.com/puckel/docker-airflow/pull/349
 * https://github.com/puckel/docker-airflow/pull/299
-
 
 ## Installation
 
@@ -26,12 +27,12 @@ Example:
 
 Optionally install [Extra Airflow Packages](https://airflow.incubator.apache.org/installation.html#extra-package) and/or python dependencies at build time :
 
-    docker build --rm --build-arg AIRFLOW_DEPS="datadog,dask" -t puckel/docker-airflow .
-    docker build --rm --build-arg PYTHON_DEPS="flask_oauthlib>=0.9" -t puckel/docker-airflow .
+    docker build --rm --build-arg AIRFLOW_DEPS="datadog,dask" -t cfg404/airflow .
+    docker build --rm --build-arg PYTHON_DEPS="flask_oauthlib>=0.9" -t cfg404/airflow .
 
 or combined
 
-    docker build --rm --build-arg AIRFLOW_DEPS="datadog,dask" --build-arg PYTHON_DEPS="flask_oauthlib>=0.9" -t puckel/docker-airflow .
+    docker build --rm --build-arg AIRFLOW_DEPS="datadog,dask" --build-arg PYTHON_DEPS="flask_oauthlib>=0.9" -t cfg404/airflow .
 
 Don't forget to update the airflow images in the docker-compose files to puckel/docker-airflow:latest.
 
@@ -56,17 +57,32 @@ Go to Admin -> Connections and Edit "postgres_default" set this values (equivale
 
 For encrypted connection passwords (in Local or Celery Executor), you must have the same fernet_key. By default docker-airflow generates the fernet_key at startup, you have to set an environment variable in the docker-compose (ie: docker-compose-LocalExecutor.yml) file to set the same key accross containers. To generate a fernet_key :
 
-    docker run puckel/docker-airflow python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
+    docker run cfg404/airflow python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
 
-## Configurating Airflow
+## Configurating Airflow with KubernetesExecutor, PostgreSQL and DAGS from git.
 
-It's possible to set any configuration value for Airflow from environment variables, which are used over values from the airflow.cfg.
+It's possible to set any configuration value for Airflow from environment variables, but in this case we'll focus on how to properly setup Airflow to run with KubernetesExecutor, connect to a PostgreSQL database and retrieve dags from a GIT repository.
+
+The following environment variables are needed in order to make it work properly:
+
+    AIRFLOW__CORE__FERNET_KEY: <my-fernet-key>
+    AIRFLOW__CORE__EXECUTOR: KubernetesExecutor
+    AIRFLOW__CORE__DAGS_FOLDER: /dags
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://username:password@database-host:5432/database-name
+    AIRFLOW__CORE__LOAD_SAMPLES: False
+    AIRFLOW__KUBERNETES__GIT_REPO: https://github.com/my-user/dags-repo.git/
+    AIRFLOW__KUBERNETES__GIT_BRANCH: master
+    AIRFLOW__KUBERNETES__GIT_DAGS_FOLDER_MOUNT_POINT: /dags
+    AIRFLOW__KUBERNETES__WORKER_SERVICE_ACCOUNT_NAME: <k8s-service-account-name>
+    AIRFLOW__KUBERNETES__WORKER_CONTAINER_REPOSITORY: cfg404/airflow
+    AIRFLOW__KUBERNETES__WORKER_CONTAINER_TAG: latest
+    AIRFLOW__KUBERNETES__NAMESPACE: <name-space-where-airflow-will-run>
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: True
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
 
 The general rule is the environment variable should be named `AIRFLOW__<section>__<key>`, for example `AIRFLOW__CORE__SQL_ALCHEMY_CONN` sets the `sql_alchemy_conn` config option in the `[core]` section.
 
-Check out the [Airflow documentation](http://airflow.readthedocs.io/en/latest/howto/set-config.html#setting-configuration-options) for more details
-
-You can also define connections via environment variables by prefixing them with `AIRFLOW_CONN_` - for example `AIRFLOW_CONN_POSTGRES_MASTER=postgres://user:password@localhost:5432/master` for a connection called "postgres_master". The value is parsed as a URI. This will work for hooks etc, but won't show up in the "Ad-hoc Query" section unless an (empty) connection is also created in the DB
+You can view all the parameters of the configuration file [here](https://github.com/apache/airflow/blob/master/airflow/config_templates/default_airflow.cfg) and you can view the Airflow setting configuration options [here](http://airflow.readthedocs.io/en/latest/howto/set-config.html#setting-configuration-options)
 
 ## Custom Airflow plugins
 
@@ -94,7 +110,7 @@ ng docker swarm.
 
 If you want to run other airflow sub-commands, such as `list_dags` or `clear` you can do so like this:
 
-    docker run --rm -ti puckel/docker-airflow airflow list_dags
+    docker run --rm -ti cfg404/airflow airflow list_dags
 
 or with your docker-compose set up like this:
 
@@ -102,8 +118,59 @@ or with your docker-compose set up like this:
 
 You can also use this to run a bash shell or any other command in the same environment that airflow would be run in:
 
-    docker run --rm -ti puckel/docker-airflow bash
-    docker run --rm -ti puckel/docker-airflow ipython
+    docker run --rm -ti cfg404/airflow bash
+    docker run --rm -ti cfg404/airflow ipython
+
+## A working KubernetesPodOperator DAG
+
+If you want to use this example, don't forget to update the service_account_name to reflect your setup and update the name of the dag (dag_id) and of course task_id and name.
+
+```
+import datetime
+
+from airflow import models
+from airflow.contrib.operators import kubernetes_pod_operator
+
+YESTERDAY = datetime.datetime.now() - datetime.timedelta(days=1)
+
+# If a Pod fails to launch, or has an error occur in the container, Airflow
+# will show the task as failed, as well as contain all of the task logs
+# required to debug.
+with models.DAG(
+        dag_id='myDag',
+        schedule_interval=datetime.timedelta(days=1),
+        start_date=YESTERDAY) as dag:
+    # Only name, namespace, image, and task_id are required to create a
+    # KubernetesPodOperator. In Cloud Composer, currently the operator defaults
+    # to using the config file found at `/home/airflow/composer_kube_config if
+    # no `config_file` parameter is specified. By default it will contain the
+    # credentials for Cloud Composer's Google Kubernetes Engine cluster that is
+    # created upon environment creation.
+    kubernetes_min_pod = kubernetes_pod_operator.KubernetesPodOperator(
+        # The ID specified for the task.
+        task_id='myPod',
+        # Name of task you want to run, used to generate Pod ID.
+        name='myPod',
+        # Entrypoint of the container, if not specified the Docker container's
+        # entrypoint is used. The cmds parameter is templated.
+        cmds=['echo'],
+        # The namespace to run within Kubernetes, default namespace is
+        # `default`. There is the potential for the resource starvation of
+        # Airflow workers and scheduler within the Cloud Composer environment,
+        # the recommended solution is to increase the amount of nodes in order
+        # to satisfy the computing requirements. Alternatively, launching pods
+        # into a custom namespace will stop fighting over resources.
+        namespace='<name-space-where-airflow-will-run>',
+        # Docker image specified. Defaults to hub.docker.com, but any fully
+        # qualified URLs will point to a custom repository. Supports private
+        # gcr.io images if the Composer Environment is under the same
+        # project-id as the gcr.io images.
+        image='ubuntu:latest',
+        # Service account name to use when spawning a pod
+        service_account_name="<k8s-service-account-name>",
+        in_cluster=True,
+    )
+```
 
 # Wanna help?
 
