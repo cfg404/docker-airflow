@@ -24,7 +24,7 @@ RUN set -ex \
     && apt-get update && apt-get install -yqq --no-install-recommends \
         ${buildDeps} \
     && useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow \
-    && pip install apache-airflow[crypto,postgres,kubernetes,aws,google_auth]==${AIRFLOW_VERSION} \
+    && pip install apache-airflow[crypto,postgres,kubernetes,s3,aws,google_auth]==${AIRFLOW_VERSION} \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
